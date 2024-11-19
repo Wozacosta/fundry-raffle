@@ -92,16 +92,43 @@ contract Raffle is VRFConsumerBaseV2Plus {
         emit RaffleEntered(msg.sender);
     }
 
+    // we could override from the AutomationCompatibleInterface of chainlink
+    // but we are not doing it here, it's just an interface
+    /**
+     * @dev This is the function that the Chainlink nodes will call to see
+     * if the lottery is ready to have a winner picked
+     * The following should be true in order for upkeepNeed to be true:
+     * 1. The time interval has passed between raffle runs
+     * 2. The lottery is open
+     * 3. The contract has ETH
+     * 4. Implicitly, the subscription has LINK
+     * @param - ignored
+     * @return upkeepNeeded - true if it's time to restart the lottery
+     * @return - ignored
+     */
+    function checkUpkeep(
+        // bytes calldata /*checkData*/
+        bytes memory /*checkData*/
+    ) public view returns (bool upkeepNeeded, bytes memory /* performData */) {
+        bool timeHasPassed = (block.timestamp - s_lastTimeStamp >= i_interval);
+        bool isOpen = s_raffleState == RaffleState.OPEN;
+        bool hasBalance = address(this).balance > 0;
+        bool hasPlayers = s_players.length > 0;
+        upkeepNeeded = timeHasPassed && isOpen && hasBalance && hasPlayers;
+        return (upkeepNeeded, "");
+    }
+
     // 1. Get a random number
     // 2. Use it to pick a winner
     // 3. Be automatically called
-    function pickWinner() external {
+    function performUpkeep(bytes calldata /* performData */) external {
         // check to see if enough time has passed
-        if (block.timestamp - s_lastTimeStamp < i_interval) {
+        (bool upkeepNeeded, ) = checkUpkeep("");
+        if (!upkeepNeeded) {
             revert();
         }
-        s_raffleState = RaffleState.CALCULATING;
 
+        s_raffleState = RaffleState.CALCULATING;
         VRFV2PlusClient.RandomWordsRequest memory request = VRFV2PlusClient
             .RandomWordsRequest({
                 keyHash: i_keyHash,
@@ -129,12 +156,12 @@ contract Raffle is VRFConsumerBaseV2Plus {
         s_raffleState = RaffleState.OPEN;
         s_players = new address payable[](0);
         s_lastTimeStamp = block.timestamp;
+        emit WinnerPicked(recentWinner);
 
         (bool success, ) = recentWinner.call{value: address(this).balance}("");
         if (!success) {
             revert Raffle__TransferFailed();
         }
-        emit WinnerPicked(recentWinner);
     }
 
     /**
