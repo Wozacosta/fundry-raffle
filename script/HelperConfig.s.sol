@@ -90,5 +90,6 @@ contract HelperConfig is CodeConstants, Script {
         });
 
         vm.stopBroadcast();
+        return localNetworkConfig;
     }
 }

@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.19;
 
-import {Script} from "forge-std/Script.sol";
+import {Script, console} from "forge-std/Script.sol";
 import {Raffle} from "src/Raffle.sol";
 import {HelperConfig} from "script/HelperConfig.s.sol";
 
@@ -14,6 +14,8 @@ contract DeployRaffle is Script {
         // local => deploy mocks, get local config
         // sepolia -> get sepolia config
         HelperConfig.NetworkConfig memory config = helperConfig.getConfig();
+        console.log("helper config vrf coordinator: %s", config.vrfCoordinator);
+        console.log("HERE");
         vm.startBroadcast();
 
         Raffle raffle = new Raffle(
@@ -24,6 +26,7 @@ contract DeployRaffle is Script {
             config.subscriptionId,
             config.callbackGasLimit
         );
+        console.log("HERE 2");
         vm.stopBroadcast();
         return (raffle, helperConfig);
     }
