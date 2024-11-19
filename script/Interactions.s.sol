@@ -4,6 +4,8 @@ pragma solidity 0.8.19;
 import {Script, console2} from "forge-std/Script.sol";
 import {HelperConfig} from "script/HelperConfig.s.sol";
 import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
+import {CodeConstants} from "script/HelperConfig.s.sol";
+import {LinkToken} from "test/mocks/LinkToken.sol";
 
 /* Create a subscription 
 https://docs.chain.link/vrf/v2-5/overview/subscription
@@ -50,5 +52,54 @@ contract CreateSubscription is Script {
 
     function run() public {
         // Create a subscription
+    }
+}
+
+contract FundSubscription is Script, CodeConstants {
+    uint256 public constant FUND_AMOUNT = 3 ether; // 3 LINK
+
+    function fundSubscriptionUsingConfig() public {
+        HelperConfig helperConfig = new HelperConfig();
+        address vrfCoordinator = helperConfig.getConfig().vrfCoordinator;
+        uint256 subscriptionId = helperConfig.getConfig().subscriptionId;
+        address linkToken = helperConfig.getConfig().link;
+        fundSubscription(vrfCoordinator, subscriptionId, linkToken);
+    }
+
+    function fundSubscription(
+        address vrfCoordinator,
+        uint256 subscriptionId,
+        address linkToken
+    ) public {
+        console2.log(
+            "Funding subscription %s on chainId: %s",
+            subscriptionId,
+            block.chainid
+        );
+        console2.log("Using vrfCoordinator: %s", vrfCoordinator);
+        if (block.chainid == LOCAL_CHAIN_ID) {
+            vm.startBroadcast();
+            VRFCoordinatorV2_5Mock(vrfCoordinator).fundSubscription(
+                subscriptionId,
+                FUND_AMOUNT
+            );
+            vm.stopBroadcast();
+        } else {
+            vm.startBroadcast();
+            // NOTE: we could use LinkToken interface form import {LinkTokenInterface} from
+            // "@chainlink/contracts/src/v0.8/shared/interfaces/LinkTokenInterface.sol";
+            // more info here: https://docs.chain.link/vrf/v2/subscription/examples/programmatic-subscription#subscription-manager-contract
+            LinkToken(linkToken).transferAndCall(
+                vrfCoordinator,
+                FUND_AMOUNT,
+                abi.encode(subscriptionId)
+            );
+            vm.stopBroadcast();
+        }
+        console2.log("Subscription funded with %s LINK", FUND_AMOUNT);
+    }
+
+    function run() public {
+        fundSubscriptionUsingConfig();
     }
 }
