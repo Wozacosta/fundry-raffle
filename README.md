@@ -62,3 +62,8 @@ function enter() external payable;
     1. Local chain
     2. Forket testnet
     3. Forket mainnet
+
+
+## Deploy on testnet
+
+follow the end of https://updraft.cyfrin.io/courses/foundry/smart-contract-lottery/fund-subscription
