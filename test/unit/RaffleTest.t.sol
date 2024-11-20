@@ -3,6 +3,8 @@
 pragma solidity 0.8.19;
 
 import {Test} from "forge-std/Test.sol";
+import {console} from "forge-std/Script.sol";
+import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 import {DeployRaffle} from "script/DeployRaffle.s.sol";
 import {HelperConfig} from "script/HelperConfig.s.sol";
 import {Raffle} from "src/Raffle.sol";
@@ -87,5 +89,95 @@ contract RaffleTest is Test {
         vm.expectRevert(Raffle.Raffle__RaffleNotOpen.selector);
         vm.prank(PLAYER);
         raffle.enter{value: entranceFee}();
+    }
+
+    /*///////////////////////////////////
+    //          Check upkeep           //
+    ///////////////////////////////////*/
+
+    function testCheckUpkeepReturnsFalseIfNoBalance() public {
+        // Arrange
+        vm.warp(block.timestamp + interval + 1);
+        vm.roll(block.number + 1); // best practice
+        // Act
+        (bool upkeepNeeded, ) = raffle.checkUpkeep("");
+        // Assert
+        assert(!upkeepNeeded);
+    }
+
+    function testCheckUpkeepReturnsFalseIfRaffleIsntOpen() public {
+        // Arrange
+        vm.prank(PLAYER);
+        raffle.enter{value: entranceFee}();
+        // simulate time passing
+        vm.warp(block.timestamp + interval + 1);
+        vm.roll(block.number + 1); // best practice
+        raffle.performUpkeep("");
+        // Act
+        (bool upkeepNeeded, ) = raffle.checkUpkeep("");
+        // Assert
+        assert(!upkeepNeeded);
+    }
+    // TODO: more check upkeep tests
+
+    /*///////////////////////////////////
+    //          Perform upkeep         //
+    ///////////////////////////////////*/
+
+    function testFulfillRandomWords() public {
+        // Enter the raffle with multiple participants
+        address player1 = address(0x1);
+        address player2 = address(0x2);
+        address player3 = address(0x3);
+
+        vm.deal(player1, 1 ether);
+        vm.deal(player2, 1 ether);
+        vm.deal(player3, 1 ether);
+
+        vm.prank(player1);
+        raffle.enter{value: entranceFee}();
+
+        vm.prank(player2);
+        raffle.enter{value: entranceFee}();
+
+        vm.prank(player3);
+        raffle.enter{value: entranceFee}();
+
+        // Perform upkeep to request random words
+        vm.warp(block.timestamp + interval + 1);
+        raffle.performUpkeep("");
+
+        // Assert: Check if the upkeep was performed correctly and the state transitioned
+        assert(raffle.getRaffleState() == Raffle.RaffleState.CALCULATING);
+
+        // Simulate fulfilling random words using a mock VRF coordinator
+
+        // uint256 requestId = 1; // Mock request ID
+        // uint256[] memory randomWords;
+        // randomWords[0] = uint256(keccak256(abi.encodePacked(block.timestamp))); // Mock random number
+
+        // Call the fulfillRandomWords function directly (simulating VRF response)
+        // raffle.fulfillRandomWords(requestId, randomWords);
+        VRFCoordinatorV2_5Mock coordinator = VRFCoordinatorV2_5Mock(
+            vrfCoordinator
+        );
+        console.log("before fulfill");
+        vm.deal(vrfCoordinator, 1 ether);
+        vm.prank(vrfCoordinator);
+
+        coordinator.fulfillRandomWords(1, address(raffle));
+        // Assert: Check the expected outcomes
+        address recentWinner = raffle.getRecentWinner();
+        console.log("Recent winner address:", recentWinner);
+        assert(
+            recentWinner == player1 ||
+                recentWinner == player2 ||
+                recentWinner == player3
+        );
+
+        // Verify that the raffle state has been reset
+        assert(raffle.getRaffleState() == Raffle.RaffleState.OPEN);
+        // Verify that the players array has been reset
+        assertEq(raffle.getPlayers().length, 0);
     }
 }
