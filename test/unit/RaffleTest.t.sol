@@ -3,11 +3,12 @@
 pragma solidity 0.8.19;
 
 import {Test} from "forge-std/Test.sol";
-import {console} from "forge-std/Script.sol";
+import {console, console2} from "forge-std/Script.sol";
 import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 import {DeployRaffle} from "script/DeployRaffle.s.sol";
 import {HelperConfig} from "script/HelperConfig.s.sol";
 import {Raffle} from "src/Raffle.sol";
+import {Vm} from "forge-std/Vm.sol";
 
 contract RaffleTest is Test {
     Raffle public raffle;
@@ -128,7 +129,6 @@ contract RaffleTest is Test {
         // Arrange
         vm.prank(PLAYER);
         raffle.enter{value: entranceFee}();
-        // simulate time passing
         vm.warp(block.timestamp + interval + 1);
         vm.roll(block.number + 1);
 
@@ -156,6 +156,34 @@ contract RaffleTest is Test {
                 rState
             )
         );
+    }
+
+    modifier raffleEntered() {
+        // Arrange
+        vm.prank(PLAYER);
+        raffle.enter{value: entranceFee}();
+        vm.warp(block.timestamp + interval + 1);
+        vm.roll(block.number + 1);
+        _;
+    }
+
+    function testPerformUpkeepUpdatesRaffleStateAndEmitsRequestId()
+        public
+        raffleEntered
+    {
+        // Act
+        vm.recordLogs();
+        raffle.performUpkeep("");
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        // our event comes after the vrfcoordinator event
+        // topic 0 is always reserved for something else
+        bytes32 requestId = entries[1].topics[1];
+
+        // Assert
+        Raffle.RaffleState rState = raffle.getRaffleState();
+        assert(uint256(requestId) > 0);
+        assert(uint256(rState) == 1);
+        console.log(uint256(requestId));
     }
 
     function testFulfillRandomWords() public {
@@ -213,5 +241,21 @@ contract RaffleTest is Test {
         assert(raffle.getRaffleState() == Raffle.RaffleState.OPEN);
         // Verify that the players array has been reset
         assertEq(raffle.getPlayers().length, 0);
+    }
+
+    /*///////////////////////////////////
+    //        FullfillRandomWords      //
+    ///////////////////////////////////*/
+
+    function testFullfillRandomWordsCanOnlyBeCalledAfterPerformUpkeep(
+        uint256 randomRequestId
+    ) public raffleEntered {
+        // Arrange / Act / Assert
+        console.log("randomRequestId", randomRequestId);
+        vm.expectRevert(VRFCoordinatorV2_5Mock.InvalidRequest.selector);
+        VRFCoordinatorV2_5Mock(vrfCoordinator).fulfillRandomWords(
+            randomRequestId,
+            address(this)
+        );
     }
 }

@@ -66,6 +66,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
     /* Events */
     event RaffleEntered(address indexed player);
     event WinnerPicked(address indexed winner);
+    event RequestedRaffleWinner(uint256 indexed requestId);
 
     constructor(
         uint256 entranceFee,
@@ -151,8 +152,8 @@ contract Raffle is VRFConsumerBaseV2Plus {
                 )
             });
 
-        s_vrfCoordinator.requestRandomWords(request); // returns uint256 requestId
-        // Get our random number from Chainlink
+        uint256 requestId = s_vrfCoordinator.requestRandomWords(request); // returns uint256 requestId
+        emit RequestedRaffleWinner(requestId);
     }
 
     function fulfillRandomWords(

@@ -13,3 +13,8 @@ fs_permissions = [
     { access = "read", path = "./broadcast" },
     { access = "read", path = "./reports" },
 ]
+
+[fuzz]
+runs = 1000
+
+# note: more options here https://github.com/foundry-rs/foundry/tree/master/crates/config
