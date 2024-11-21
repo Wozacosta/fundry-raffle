@@ -251,11 +251,65 @@ contract RaffleTest is Test {
         uint256 randomRequestId
     ) public raffleEntered {
         // Arrange / Act / Assert
-        console.log("randomRequestId", randomRequestId);
         vm.expectRevert(VRFCoordinatorV2_5Mock.InvalidRequest.selector);
         VRFCoordinatorV2_5Mock(vrfCoordinator).fulfillRandomWords(
             randomRequestId,
             address(this)
         );
+    }
+
+    function testFullfillRandomWordsPicksAWinnerResetsAndSendMoney()
+        public
+        raffleEntered
+    {
+        // Arrange
+        uint256 additionalEntrants = 3; // 4 total
+        uint256 startingIndex = 1;
+        address expectedWinner = address(1); // NOTE: dig into vrf mock to find out why
+        console.log("----balance----");
+        console.log(address(vrfCoordinator).balance);
+
+        for (
+            uint256 i = startingIndex;
+            i < startingIndex + additionalEntrants;
+            i++
+        ) {
+            // address player = makeAddr(i);
+            address player = address(uint160(i));
+            hoax(player, 1 ether);
+            raffle.enter{value: entranceFee}();
+        }
+
+        uint256 startingTimeStamp = raffle.getLastTimeStamp();
+        uint256 winnerStartingBalance = expectedWinner.balance;
+
+        // Act
+        vm.recordLogs();
+        raffle.performUpkeep("");
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        bytes32 requestId = entries[1].topics[1];
+
+        // vm.deal(address(raffle), 5 ether);
+        // console.log("----balance raffle------");
+        // console.log(address(raffle).balance);
+        // vm.deal(vrfCoordinator, 5 ether);
+        // vm.prank(vrfCoordinator);
+
+        VRFCoordinatorV2_5Mock(vrfCoordinator).fulfillRandomWords(
+            uint256(requestId),
+            address(raffle)
+        );
+
+        // Assert
+        address recentWinner = raffle.getRecentWinner();
+        Raffle.RaffleState rState = raffle.getRaffleState();
+        uint256 winnerBalance = recentWinner.balance;
+        uint256 endingTimeStamp = raffle.getLastTimeStamp();
+        uint256 prize = entranceFee * (additionalEntrants + 1);
+
+        assert(recentWinner == expectedWinner);
+        assert(uint256(rState) == 0); // open
+        assert(winnerBalance == winnerStartingBalance + prize);
+        assert(endingTimeStamp > startingTimeStamp);
     }
 }
