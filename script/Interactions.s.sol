@@ -30,17 +30,19 @@ contract CreateSubscription is Script {
     function createSubscriptionUsingConfig() public returns (uint256, address) {
         HelperConfig helperConfig = new HelperConfig();
         address vrfCoordinator = helperConfig.getConfig().vrfCoordinator;
-        (uint256 subId, ) = createSubscription(vrfCoordinator);
+        address account = helperConfig.getConfig().account;
+        (uint256 subId, ) = createSubscription(vrfCoordinator, account);
         return (subId, vrfCoordinator);
         // create subscription...
     }
 
     function createSubscription(
-        address vrfCoordinator
+        address vrfCoordinator,
+        address account
     ) public returns (uint256, address) {
         // create subscription...
         console2.log("Creating subscription on chainId: %s", block.chainid);
-        vm.startBroadcast();
+        vm.startBroadcast(account);
         uint256 subId = VRFCoordinatorV2_5Mock(vrfCoordinator)
             .createSubscription();
         vm.stopBroadcast();
@@ -64,13 +66,15 @@ contract FundSubscription is Script, CodeConstants {
         address vrfCoordinator = helperConfig.getConfig().vrfCoordinator;
         uint256 subscriptionId = helperConfig.getConfig().subscriptionId;
         address linkToken = helperConfig.getConfig().linkToken;
-        fundSubscription(vrfCoordinator, subscriptionId, linkToken);
+        address account = helperConfig.getConfig().account;
+        fundSubscription(vrfCoordinator, subscriptionId, linkToken, account);
     }
 
     function fundSubscription(
         address vrfCoordinator,
         uint256 subscriptionId,
-        address linkToken
+        address linkToken,
+        address account
     ) public {
         console2.log(
             "Funding subscription %s on chainId: %s",
@@ -86,10 +90,11 @@ contract FundSubscription is Script, CodeConstants {
             );
             vm.stopBroadcast();
         } else {
-            vm.startBroadcast();
+            vm.startBroadcast(account);
             // NOTE: we could use LinkToken interface form import {LinkTokenInterface} from
             // "@chainlink/contracts/src/v0.8/shared/interfaces/LinkTokenInterface.sol";
             // more info here: https://docs.chain.link/vrf/v2/subscription/examples/programmatic-subscription#subscription-manager-contract
+            console2.log("Funding subscription with %s LINK", FUND_AMOUNT);
             LinkToken(linkToken).transferAndCall(
                 vrfCoordinator,
                 FUND_AMOUNT,
@@ -110,13 +115,15 @@ contract AddConsumer is Script {
         HelperConfig helperConfig = new HelperConfig();
         uint256 subscriptionId = helperConfig.getConfig().subscriptionId;
         address vrfCoordinator = helperConfig.getConfig().vrfCoordinator;
-        addConsumer(mostRecentlyDeployed, vrfCoordinator, subscriptionId);
+        address account = helperConfig.getConfig().account;
+        addConsumer(mostRecentlyDeployed, vrfCoordinator, subscriptionId, account);
     }
 
     function addConsumer(
         address contractToAddToVrf,
         address vrfCoordinator,
-        uint256 subId
+        uint256 subId,
+        address account
     ) public {
         console2.log("Adding consumer to VRF coordinator: %s", vrfCoordinator);
         console2.log("Consumer contract: %s", contractToAddToVrf);
@@ -125,7 +132,7 @@ contract AddConsumer is Script {
             subId,
             block.chainid
         );
-        vm.startBroadcast();
+        vm.startBroadcast(account);
         VRFCoordinatorV2_5Mock(vrfCoordinator).addConsumer(
             subId,
             contractToAddToVrf

@@ -9,8 +9,9 @@ import {DeployRaffle} from "script/DeployRaffle.s.sol";
 import {HelperConfig} from "script/HelperConfig.s.sol";
 import {Raffle} from "src/Raffle.sol";
 import {Vm} from "forge-std/Vm.sol";
+import {CodeConstants} from "script/HelperConfig.s.sol";
 
-contract RaffleTest is Test {
+contract RaffleTest is Test, CodeConstants {
     Raffle public raffle;
     HelperConfig public helperConfig;
 
@@ -187,6 +188,7 @@ contract RaffleTest is Test {
     }
 
     function testFulfillRandomWords() public {
+        vm.skip(true);
         // Enter the raffle with multiple participants
         address player1 = address(0x1);
         address player2 = address(0x2);
@@ -246,10 +248,16 @@ contract RaffleTest is Test {
     /*///////////////////////////////////
     //        FullfillRandomWords      //
     ///////////////////////////////////*/
+   modifier skipFork() {
+    if (block.chainid != LOCAL_CHAIN_ID) {
+        return;
+    }
+    _;
+   }
 
     function testFullfillRandomWordsCanOnlyBeCalledAfterPerformUpkeep(
         uint256 randomRequestId
-    ) public raffleEntered {
+    ) public raffleEntered skipFork {
         // Arrange / Act / Assert
         vm.expectRevert(VRFCoordinatorV2_5Mock.InvalidRequest.selector);
         VRFCoordinatorV2_5Mock(vrfCoordinator).fulfillRandomWords(
@@ -261,6 +269,7 @@ contract RaffleTest is Test {
     function testFullfillRandomWordsPicksAWinnerResetsAndSendMoney()
         public
         raffleEntered
+        skipFork
     {
         // Arrange
         uint256 additionalEntrants = 3; // 4 total

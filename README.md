@@ -67,3 +67,16 @@ function enter() external payable;
 ## Deploy on testnet
 
 follow the end of https://updraft.cyfrin.io/courses/foundry/smart-contract-lottery/fund-subscription
+```
+
+- make integrations tests
+- forked tests
+- staging tests <- run tests on a mainnet or testnet
+
+- fuzzing 
+- stateful fuzz
+- stateless fuzz
+- formal verification
+
+
+future: https://tenderly.co/virtual-testnets ?

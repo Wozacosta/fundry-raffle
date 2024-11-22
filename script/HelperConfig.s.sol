@@ -28,6 +28,7 @@ contract HelperConfig is CodeConstants, Script {
         uint256 subscriptionId;
         uint32 callbackGasLimit;
         address linkToken;
+        address account;
     }
 
     NetworkConfig public localNetworkConfig;
@@ -65,7 +66,8 @@ contract HelperConfig is CodeConstants, Script {
                 gasLane: 0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae,
                 callbackGasLimit: 500_000,
                 subscriptionId: 0,
-                linkToken: 0x779877A7B0D9E8603169DdbD7836e478b4624789
+                linkToken: 0x779877A7B0D9E8603169DdbD7836e478b4624789,
+                account: 0x5615412164dF3c94cEb614387A6fF03a2fA6e193
             });
     }
 
@@ -92,7 +94,8 @@ contract HelperConfig is CodeConstants, Script {
             gasLane: 0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae,
             callbackGasLimit: 500_000,
             subscriptionId: 0,
-            linkToken: address(linkToken)
+            linkToken: address(linkToken),
+            account: DEFAULT_SENDER // NOTE: find in forge-std/src/Base.sol
         });
 
         vm.stopBroadcast();
