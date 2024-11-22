@@ -65,7 +65,7 @@ contract HelperConfig is CodeConstants, Script {
                 // gwei key hash
                 gasLane: 0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae,
                 callbackGasLimit: 500_000,
-                subscriptionId: 0,
+                subscriptionId: 31076380755596859978221378540918838530750541030460323524660526821703501013817,
                 linkToken: 0x779877A7B0D9E8603169DdbD7836e478b4624789,
                 account: 0x5615412164dF3c94cEb614387A6fF03a2fA6e193
             });
